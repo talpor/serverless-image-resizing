@@ -33,15 +33,25 @@ exports.handler = function(event, context, callback) {
   }
 
   S3.getObject({Bucket: BUCKET, Key: originalKey}).promise()
-    .then(data => Sharp(data.Body)
-      .resize(width, height)
-      .toFormat('png')
-      .toBuffer()
-    )
+    .then(data => {
+        const image = Sharp(data.body)
+        image
+        .metadata()
+        .then(function(metadata) {
+          const { width } = metadata
+          const newWidth = width > 1024 ? 1024 : width
+          return image
+          .jpeg({
+            quality: 80
+          })
+          .resize(newWidth, null)
+          .toBuffer()
+        })
+    })
     .then(buffer => S3.putObject({
         Body: buffer,
         Bucket: BUCKET,
-        ContentType: 'image/png',
+        ContentType: 'image/jpeg',
         Key: key,
       }).promise()
     )
